@@ -1,6 +1,6 @@
 package com.example.auth.entity;
 
-import lombok.Builder;
+
 import lombok.Data;
 
 import java.sql.Timestamp;

@@ -1,14 +1,10 @@
 package com.example.auth.services;
 
+import com.example.auth.entity.*;
 import com.example.auth.exceptions.UserExistingWithEmail;
 import com.example.auth.exceptions.UserExistingWithName;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
-import com.example.auth.entity.AuthResponse;
-import com.example.auth.entity.Role;
-import com.example.auth.entity.Code;
-import com.example.auth.entity.User;
-import com.example.auth.entity.UserRegisterDTO;
 import com.example.auth.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import jakarta.servlet.http.Cookie;
-
+import org.springframework.http.HttpStatus;
 import java.util.Arrays;
 
 @Service
@@ -49,13 +45,18 @@ public class UserService {
     public void validateToken(HttpServletRequest request,HttpServletResponse response) throws ExpiredJwtException, IllegalArgumentException{
         String token = null;
         String refresh = null;
-        for (Cookie value : Arrays.stream(request.getCookies()).toList()) {
-            if (value.getName().equals("Authorization")) {
-                token = value.getValue();
-            } else if (value.getName().equals("refresh")) {
-                refresh = value.getValue();
+        if (request.getCookies() != null){
+            for (Cookie value : Arrays.stream(request.getCookies()).toList()) {
+                if (value.getName().equals("Authorization")) {
+                    token = value.getValue();
+                } else if (value.getName().equals("refresh")) {
+                    refresh = value.getValue();
+                }
             }
+        }else {
+            throw new IllegalArgumentException("Token can't be null");
         }
+
         try {
             jwtService.validateToken(token);
         }catch (IllegalArgumentException | ExpiredJwtException e){
@@ -111,6 +112,39 @@ public class UserService {
         return ResponseEntity.ok(new AuthResponse(Code.A2));
     }
 
+    public ResponseEntity<LoginResponse> loggedIn(HttpServletRequest request, HttpServletResponse response){
+        try{
+            validateToken(request, response);
+            return ResponseEntity.ok(new LoginResponse(true));
+        }catch (ExpiredJwtException|IllegalArgumentException e){
+            return ResponseEntity.ok(new LoginResponse(false));
+        }
+    }
+    public ResponseEntity<?> loginByToken(HttpServletRequest request, HttpServletResponse response){
+        try {
+            validateToken(request, response);
+            String refresh = null;
+            for (Cookie value : Arrays.stream(request.getCookies()).toList()) {
+                if (value.getName().equals("refresh")) {
+                    refresh = value.getValue();
+                }
+            }
+            String login = jwtService.getSubject(refresh);
+            User user = userRepository.findUserByLoginAndLockAndEnabled(login).orElse(null);
+            if (user != null){
+                return ResponseEntity.ok(
+                        UserRegisterDTO
+                                .builder()
+                                .login(user.getUsername())
+                                .email(user.getEmail())
+                                .role(user.getRole())
+                                .build());
+            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(Code.A1));
+        }catch (ExpiredJwtException|IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(Code.A3));
+        }
+    }
 
 
 

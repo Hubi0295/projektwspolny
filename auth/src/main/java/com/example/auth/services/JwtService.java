@@ -31,7 +31,7 @@ public class JwtService {
             Map<String, Object> claimns = new HashMap<>();
             return createToken(claimns,username,exp);
         }
-        private String getSubject(final String token){
+        public String getSubject(final String token){
             return Jwts
                     .parser()
                     .setSigningKey(SECRET)
