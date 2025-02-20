@@ -56,6 +56,10 @@ public class User implements UserDetails {
         return role;
     }
 
+    public String getUuid() {
+        return uuid;
+    }
+
     @Override
     public String getPassword() {
         return password;
