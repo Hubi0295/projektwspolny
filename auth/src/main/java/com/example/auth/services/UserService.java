@@ -167,11 +167,11 @@ public class UserService {
         if (user != null){
             ResetOperations resetOperations = resetOperationService.initResetOperation(user);
             emailService.sendPasswordRecovery(user,resetOperations.getUid());
-
             return;
         }
         throw new UserDoesntExistException("User dont exist");
     }
+
 
     public void restPassword(ChangePasswordData changePasswordData) throws UserDoesntExistException{
         ResetOperations resetOperations = resetOperationsRepository.findByUid(changePasswordData.getUid()).orElse(null);
